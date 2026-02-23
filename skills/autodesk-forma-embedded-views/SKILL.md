@@ -1,6 +1,6 @@
 ---
 name: autodesk-forma-embedded-views
-description: A guide for creating Autodesk Forma site design extensions using embedded views
+description: A guide for creating Autodesk Forma Site Design extensions using embedded views
 ---
 # Creating Autodesk Forma Site Design Extensions using Embedded Views
 
