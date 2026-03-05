@@ -1,6 +1,6 @@
 # Forma Site Design SDK Skills
 
-AI agent skills for building [Autodesk Forma](https://www.autodesk.com/products/forma) site design extensions.
+AI agent skills for building [Autodesk Forma Site Design](https://www.autodesk.com/products/forma) extensions.
 
 ## Installation
 

@@ -6,15 +6,15 @@ description: A guide for creating Autodesk Forma Site Design extensions using em
 
 ## Overview
 
-Autodesk Forma extensions with embedded views allow developers to create custom user interfaces that integrate directly into the Forma web application. Extensions are rendered as HTML/CSS/JavaScript content within iframes and can communicate with the Forma host application via the `forma-embedded-view-sdk`.
+Autodesk Forma Site Design extensions with embedded views allow developers to create custom user interfaces that integrate directly into the Forma Site Design web application. Extensions are rendered as HTML/CSS/JavaScript content within iframes and can communicate with the Forma Site Design host application via the `forma-embedded-view-sdk`.
 
 **Key Capabilities:**
 - Interact with the 3D scene (select, color, hide/show elements)
 - Fetch geometry and project data
 - Access analysis results (sun, noise) and area metrics
-- Store data to Forma's element system
+- Store data to Forma Site Design's element system
 - Edit proposals and add assets to library
-- Invoke custom endpoints with Forma authentication
+- Invoke custom endpoints with Forma Site Design authentication
 
 ## Extension Architecture
 
@@ -286,7 +286,7 @@ await Forma.camera.zoomTo({
 
 ### Elements API
 
-Access Forma's element system for persistent data storage:
+Access Forma Site Design's element system for persistent data storage:
 
 ```javascript
 // Get element by URN
@@ -326,9 +326,9 @@ await Forma.openFloatingPanel({
 
 ## Authentication and HTTP APIs
 
-### Using Forma HTTP APIs
+### Using Forma Site Design HTTP APIs
 
-To call Forma or APS HTTP APIs, you need a **three-legged access token** obtained via OAuth 2.0 Authorization Code Grant flow with PKCE.
+To call Forma Site Design or APS HTTP APIs, you need a **three-legged access token** obtained via OAuth 2.0 Authorization Code Grant flow with PKCE.
 
 ### Configure Auth
 ```javascript
@@ -347,7 +347,7 @@ const tokenResponse = await Forma.auth.acquireTokenOverlay();
 // Returns: { accessToken: string, expiresIn: number, ... }
 ```
 
-### Call Forma API
+### Call Forma Site Design API
 ```javascript
 const projectRes = await fetch(
   `https://developer.api.autodesk.com/forma/project/v1alpha/projects/${encodeURIComponent(Forma.getProjectId())}`,
@@ -384,10 +384,10 @@ Configure floating panels via YAML in the extension management **Buttons** secti
 Configure left/right panel views in the **Embedded views** section by selecting placement and specifying URL.
 
 ### Endpoints Configuration
-Add custom endpoints in the **Endpoints** section to use with `invokeEndpoint()`. These endpoints receive Forma-specific authentication.
+Add custom endpoints in the **Endpoints** section to use with `invokeEndpoint()`. These endpoints receive Forma Site Design-specific authentication.
 
 ### Secret for Endpoints
-Set a secret in **Secret used with endpoints** section. Forma includes this in request headers as `x-forma-extension-secret` for validation.
+Set a secret in **Secret used with endpoints** section. Forma Site Design includes this in request headers as `x-forma-extension-secret` for validation.
 
 ## Development Best Practices
 
@@ -552,7 +552,7 @@ await Forma.sun.setState({
 ```
 
 ### Generators API
-Access and manipulate Forma's generative design capabilities.
+Access and manipulate Forma Site Design's generative design capabilities.
 
 ### Predictive Analysis API
 Run and retrieve predictive analysis results.
@@ -565,7 +565,7 @@ Run and retrieve predictive analysis results.
 - **camera** - Control 3D camera view
 - **colorbar** - Display analysis color legends
 - **design-tool** - Create custom design tools
-- **elements** - Access Forma's element system
+- **elements** - Access Forma Site Design's element system
 - **experimental** - Experimental features (subject to change)
 - **extensions** - Invoke endpoints, open panels
 - **generators** - Generative design capabilities
