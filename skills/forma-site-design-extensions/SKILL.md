@@ -1,12 +1,12 @@
 ---
-name: autodesk-forma-embedded-views
-description: A guide for creating Autodesk Forma Site Design extensions using embedded views
+name: forma-site-design-extensions
+description: A guide for creating Autodesk Forma Site Design extensions using embedded views SDK
 ---
-# Creating Autodesk Forma Site Design Extensions using Embedded Views
+# Creating Autodesk Forma Site Design Extensions using Embedded Views SDK
 
 ## Overview
 
-Autodesk Forma Site Design extensions with embedded views allow developers to create custom user interfaces that integrate directly into the Forma Site Design web application. Extensions are rendered as HTML/CSS/JavaScript content within iframes and can communicate with the Forma Site Design host application via the `forma-embedded-view-sdk`.
+Autodesk Forma Site Design extensions in embedded views allow developers to create custom user interfaces that integrate directly into the Forma Site Design web application. Extensions are rendered as HTML/CSS/JavaScript content within iframes and can communicate with the Forma Site Design host application via the `forma-embedded-view-sdk`.
 
 **Key Capabilities:**
 - Interact with the 3D scene (select, color, hide/show elements)

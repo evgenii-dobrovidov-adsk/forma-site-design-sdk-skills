@@ -1,5 +1,5 @@
 ---
-name: autodesk-forma-coordinate-system
+name: forma-site-design-coordinate-system
 description: A guide for handling coordinates and their transformations in Autodesk Forma Site Design extensions
 ---
 # Forma Site Design coordinate & transform reference
