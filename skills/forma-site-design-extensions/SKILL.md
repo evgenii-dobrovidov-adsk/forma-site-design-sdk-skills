@@ -1,603 +1,302 @@
 ---
 name: forma-site-design-extensions
-description: A guide for creating Autodesk Forma Site Design extensions using embedded views SDK
+description: Builds Autodesk Forma Site Design embedded-view extensions with the full forma-embedded-view-sdk surface, including host-level helpers plus analysis, areaMetrics, auth, camera, colorbar, design-tool, elements, experimental, extensions, generators, geodata, geometry, integrate-elements, library, predictive-analysis, project, proposal, render, selection, sun, and terrain APIs. Use when the user mentions Forma, embedded views, extension SDK, proposals, geometry, analyses, or any Forma SDK module.
 ---
-# Creating Autodesk Forma Site Design Extensions using Embedded Views SDK
+# Forma Site Design Extensions
 
-## Overview
+## When to use
+Use this skill for any Autodesk Forma Site Design embedded-view task involving:
+- `forma-embedded-view-sdk`
+- extension setup and registration
+- host-level embedded view behavior
+- any SDK module in the live docs
 
-Autodesk Forma Site Design extensions in embedded views allow developers to create custom user interfaces that integrate directly into the Forma Site Design web application. Extensions are rendered as HTML/CSS/JavaScript content within iframes and can communicate with the Forma Site Design host application via the `forma-embedded-view-sdk`.
-
-**Key Capabilities:**
-- Interact with the 3D scene (select, color, hide/show elements)
-- Fetch geometry and project data
-- Access analysis results (sun, noise) and area metrics
-- Store data to Forma Site Design's element system
-- Edit proposals and add assets to library
-- Invoke custom endpoints with Forma Site Design authentication
-
-## Extension Architecture
-
-### Hosting Requirements
-- Extensions must be provided as a URL to a **statically hosted website**
-- Should support **responsive design** (default width: 260px, but may vary)
-- Served via HTTPS for production environments
-- Can be developed locally using localhost with CORS enabled
-
-### Placement Options
-
-There are **three placement types** for embedded views:
-
-1. **Floating Panel** - Most flexible option for various purposes
-   - Opens when clicking extension in left icon row
-   - Can be opened programmatically via `Forma.openFloatingPanel()`
-   - Default size: 400x400px (configurable)
-   - Limitation: Can configure either LEFT MENU PANEL or FLOATING PANEL, not both
-
-2. **Left Menu Panel** - For managing proposals/projects
-   - Similar to native Library and Collaboration panels
-   - Access by clicking extension icon in left icon row
-
-3. **Right Menu Analysis Panel** - For analyses and calculations
-   - Contains fixed analysis menu tab on top
-   - Accessed via extension icon in analysis menu
-
-## SDK Installation and Setup
-
-### Installation via npm
-```bash
-npm install forma-embedded-view-sdk
-```
-
-### Direct import via esm.sh
-```javascript
-import { Forma } from "https://esm.sh/forma-embedded-view-sdk/auto";
-```
-
-### Recommended Import Pattern
-Use the **auto-import** pattern to ensure proper iframe communication setup:
-
-```javascript
+## Source of truth
+- Default stack: TypeScript + Vite + `forma-embedded-view-sdk/auto`.
+- Default import:
+```ts
 import { Forma } from "forma-embedded-view-sdk/auto";
 ```
-
-The `Forma` object is an instance of `EmbeddedViewSdk` class with access to all APIs.
-
-## Core SDK APIs
-
-### Project Context APIs
-
-#### Get Project Information
-```javascript
-const projectId = Forma.getProjectId();
-const region = Forma.getRegion(); // Returns x-ads-region header value
-```
-
-#### Proposal API
-```javascript
-// Get current proposal ID
-const proposalId = await Forma.proposal.getId();
-
-// Get proposal revision
-const revision = await Forma.proposal.getRevision();
-```
-
-### Geometry API
-
-#### Retrieve Elements by Category
-```javascript
-// Get all building paths
-const buildingPaths = await Forma.geometry.getPathsByCategory({ 
-  category: "building" 
-});
-
-// Get triangulated geometry
-const triangles = await Forma.geometry.getTriangles({ path });
-// Returns Float32Array with vertex positions (x,y,z for each vertex)
-```
-
-#### Available Categories
-Common categories include: `building`, `terrain`, `road`, `path`, `vegetation`
-
-### Render API
-
-The Render API provides **temporary visual changes** that don't persist to the proposal. All changes are automatically cleaned up when the extension closes.
-
-#### Color/Update Meshes
-```javascript
-// Update mesh with custom colors
-await Forma.render.updateMesh({
-  id: path,
-  geometryData: {
-    position: Float32Array, // vertex positions (x,y,z per vertex)
-    color: Uint8Array       // RGBA values per triangle (4 bytes per triangle)
-  }
-});
-
-// Add new mesh to scene
-const { id } = await Forma.render.addMesh({
-  geometryData: { position, color },
-  transform?: { ... } // Optional transformation matrix
-});
-
-// Remove rendered mesh
-await Forma.render.remove({ id });
-
-// Clean up all render changes
-await Forma.render.cleanup();
-```
-
-#### Element Visibility
-```javascript
-// Hide single element
-await Forma.render.hideElement({ path });
-
-// Hide multiple elements
-await Forma.render.hideElementsBatch({ paths: [...] });
-
-// Show element
-await Forma.render.unhideElement({ path });
-
-// Show all hidden elements
-await Forma.render.unhideAllElements();
-
-// Set visibility for multiple elements
-await Forma.render.setElementsVisibility({
-  paths: [
-    { path: "path1", visible: true },
-    { path: "path2", visible: false }
-  ]
-});
-```
-
-#### Element Colors API
-```javascript
-// Set element color
-await Forma.render.elementColors.set({
-  elements: [
-    { path: "path1", color: { r: 255, g: 0, b: 0 } }
-  ]
-});
-
-// Reset element colors
-await Forma.render.elementColors.reset({ paths: ["path1", "path2"] });
-```
-
-#### Render GeoJSON
-```javascript
-await Forma.render.geojson.add({
-  id: "my-geojson",
-  geojson: { type: "FeatureCollection", features: [...] },
-  style?: { fillColor, strokeColor, fillOpacity, strokeWidth }
-});
-
-await Forma.render.geojson.remove({ id: "my-geojson" });
-```
-
-#### Render GLB Models
-```javascript
-await Forma.render.glb.add({
-  id: "my-model",
-  url: "https://example.com/model.glb",
-  transform?: { position, rotation, scale }
-});
-
-await Forma.render.glb.remove({ id: "my-model" });
-```
-
-### Selection API
-
-```javascript
-// Get currently selected elements
-const selectedPaths = await Forma.selection.getSelection();
-// Returns string[] of element paths
-
-// Set selection
-await Forma.selection.setSelection({ paths: ["path1", "path2"] });
-
-// Listen to selection changes
-Forma.selection.add((selectedPaths) => {
-  console.log("Selection changed:", selectedPaths);
-});
-```
-
-### Analysis API
-
-#### List Available Analyses
-```javascript
-const analyses = await Forma.analysis.list({ 
-  authcontext: projectId 
-});
-
-// Filter for successful analyses in current proposal
-const currentProposalId = await Forma.proposal.getId();
-const sunAnalysis = analyses
-  .filter(({ proposalId, status }) => 
-    proposalId === currentProposalId && status === "SUCCEEDED"
-  )
-  .find(({ analysisType }) => analysisType === "sun");
-```
-
-#### Analysis Interface
-```typescript
-interface Analysis {
-  analysisId: string;
-  analysisType: "sun" | "noise" | string;
-  createdAt: number;
-  proposalId: string;
-  proposalRevision: string;
-  status: "SUCCEEDED" | "FAILED";
-  updatedAt: number;
-}
-```
-
-#### Get Ground Grid Results
-```javascript
-const groundGrid = await Forma.analysis.getGroundGrid({ 
-  analysis: sunAnalysis 
-});
-
-// AnalysisGroundGrid structure:
-// {
-//   grid: Float32Array | Uint8Array,  // Flat array of result values
-//   mask?: Uint8Array,                // Boolean mask for valid samples
-//   resolution: number,               // Meters between sample points
-//   width: number,                    // Grid width (number of points)
-//   height: number,                   // Grid height (number of points)
-//   x0: number,                       // Upper-left corner X coordinate
-//   y0: number                        // Upper-left corner Y coordinate
-// }
-```
-
-#### Calculate Sample Point Coordinates
-```javascript
-for (let k = 0; k < N_POINTS; k++) {
-  const x = x0 + resolution / 2 + resolution * Math.floor(k % width);
-  const y = y0 - resolution / 2 - resolution * Math.floor(k / width);
-}
-```
-
-### Area Metrics API
-
-```javascript
-// Get area metrics for elements
-const metrics = await Forma.areaMetrics.calculate({
-  paths: buildingPaths
-});
-```
-
-### Camera API
-
-```javascript
-// Get current camera state
-const camera = await Forma.camera.getState();
-
-// Set camera position
-await Forma.camera.setState({
-  position: { x, y, z },
-  target: { x, y, z }
-});
-
-// Zoom to elements
-await Forma.camera.zoomTo({ 
-  paths: ["path1", "path2"] 
-});
-```
-
-### Elements API
-
-Access Forma Site Design's element system for persistent data storage:
-
-```javascript
-// Get element by URN
-const element = await Forma.elements.get({ urn });
-
-// Get multiple elements
-const elements = await Forma.elements.getBatch({ urns: [...] });
-```
-
-### Library API
-
-```javascript
-// Add item to library
-await Forma.library.addItem({
-  name: "My Item",
-  thumbnail: "base64-image-data",
-  data: { ... }
-});
-```
-
-### Extensions API
-
-```javascript
-// Invoke custom endpoint with authentication
-const response = await Forma.extensions.invokeEndpoint({
-  endpointId: "my-endpoint",
-  method: "POST",
-  data: { ... }
-});
-
-// Open floating panel
-await Forma.openFloatingPanel({
-  url: "https://example.com/panel",
-  preferredSize: { width: 400, height: 600 }
-});
-```
-
-## Authentication and HTTP APIs
-
-### Using Forma Site Design HTTP APIs
-
-To call Forma Site Design or APS HTTP APIs, you need a **three-legged access token** obtained via OAuth 2.0 Authorization Code Grant flow with PKCE.
-
-### Configure Auth
-```javascript
-Forma.auth.configure({
-  clientId: "YOUR_APS_CLIENT_ID",
-  callbackUrl: "http://localhost:8080/auth",
-  scopes: ["data:read", "data:write"]
-});
-```
-
-### Acquire Token with Overlay
-```javascript
-const tokenResponse = await Forma.auth.acquireTokenOverlay();
-// Displays permission overlay if no token exists
-// Opens popup for OAuth flow
-// Returns: { accessToken: string, expiresIn: number, ... }
-```
-
-### Call Forma Site Design API
-```javascript
-const projectRes = await fetch(
-  `https://developer.api.autodesk.com/forma/project/v1alpha/projects/${encodeURIComponent(Forma.getProjectId())}`,
-  {
-    headers: {
-      authorization: `Bearer ${tokenResponse.accessToken}`,
-      "x-ads-region": Forma.getRegion(),
-      accept: "application/json"
-    }
-  }
-);
-const projectData = await projectRes.json();
-```
-
-### Service Account Configuration
-In the extension management page, add your APS app's `clientId` as a service account under the **Integration** section.
-
-## Extension Configuration (YAML)
-
-Configure floating panels via YAML in the extension management **Buttons** section:
-
-```yaml
-- label: My Extension
-  actions:
-    click:
-      type: OPEN_FLOATING_PANEL
-      url: https://example.com/my-extension
-      preferredSize:  # Optional
-        width: 400
-        height: 600
-```
-
-### Embedded View Configuration
-Configure left/right panel views in the **Embedded views** section by selecting placement and specifying URL.
-
-### Endpoints Configuration
-Add custom endpoints in the **Endpoints** section to use with `invokeEndpoint()`. These endpoints receive Forma Site Design-specific authentication.
-
-### Secret for Endpoints
-Set a secret in **Secret used with endpoints** section. Forma Site Design includes this in request headers as `x-forma-extension-secret` for validation.
-
-## Development Best Practices
-
-### Local Development Setup
-```bash
-# Using Vite with Preact and TypeScript
-npm init preact
-
-# Install SDK
-npm install forma-embedded-view-sdk
-
-# Configure port in vite.config.ts
-export default defineConfig({
-  plugins: [preact()],
-  server: {
-    port: 8080,  // Match extension configuration
-  }
-});
-
-# Start dev server
-npm run dev
-```
-
-### Storage Considerations
-
-**Important:** Modern browsers use **storage partitioning** for iframes. This means:
-- Cookies and localStorage in the embedded view are isolated from the same domain accessed directly
-- Each iframe has its own storage partition
-- Users may need to re-authenticate even if logged in on your domain
-
-### Authentication Best Practices
-
-**DO NOT** include username/password fields directly in the extension (phishing risk).
-
-**DO** use popup-based authentication:
-```javascript
-// Open authentication popup
-const loginWindow = window.open(
-  "https://example.com/login",
-  "extension-login"
-);
-
-// In login page, send token back via postMessage
-window.opener.postMessage(
-  JSON.stringify({ token: data }),
-  "https://example.com"  // Specify origin for security
-);
-
-// In extension, listen for token
-window.addEventListener("message", (event) => {
-  if (event.origin !== "https://example.com") return;
-  
-  const data = JSON.parse(event.data);
-  localStorage.setItem("token", data.token);
-});
-```
-
-### Error Handling
-
-```javascript
-import { RequestError } from "forma-embedded-view-sdk";
-
-try {
-  await Forma.geometry.getTriangles({ path });
-} catch (error) {
-  if (error instanceof RequestError) {
-    console.error("API request failed:", error.message);
-  }
-}
-```
-
-## Example: Color Buildings Extension
-
-Complete example of selecting and coloring buildings:
-
-```javascript
-import { render } from 'preact';
-import { Forma } from "forma-embedded-view-sdk/auto";
-import { useState, useEffect } from "preact/hooks";
-import { RgbaColor, RgbaColorPicker } from "powerful-color-picker";
-
-const DEFAULT_COLOR = { r: 0, g: 255, b: 255, a: 1.0 };
-
-function App() {
-  const [buildingPaths, setBuildingPaths] = useState([]);
-  const [selectedColor, setSelectedColor] = useState(DEFAULT_COLOR);
-
-  useEffect(() => {
-    Forma.geometry
-      .getPathsByCategory({ category: "building" })
-      .then(setBuildingPaths);
-  }, []);
-
-  const colorBuildings = async () => {
-    const selectedPaths = await Forma.selection.getSelection();
-    
-    for (let path of selectedPaths) {
-      if (buildingPaths.includes(path)) {
-        const position = await Forma.geometry.getTriangles({ path });
-        const numTriangles = position.length / 3;
-        const color = new Uint8Array(numTriangles * 4);
-        
-        for (let i = 0; i < numTriangles; i++) {
-          color[i * 4 + 0] = selectedColor.r;
-          color[i * 4 + 1] = selectedColor.g;
-          color[i * 4 + 2] = selectedColor.b;
-          color[i * 4 + 3] = Math.round(selectedColor.a * 255);
-        }
-        
-        await Forma.render.updateMesh({ 
-          id: path, 
-          geometryData: { position, color } 
-        });
-      }
-    }
-  };
-
-  const reset = () => {
-    Forma.render.cleanup();
-    setSelectedColor(DEFAULT_COLOR);
-  };
-
-  return (
-    <>
-      <div>Total buildings: {buildingPaths?.length}</div>
-      <RgbaColorPicker 
-        color={selectedColor} 
-        onChange={setSelectedColor} 
-      />
-      <button onClick={colorBuildings}>Color Buildings</button>
-      <button onClick={reset}>Reset</button>
-    </>
-  );
-}
-
-render(<App />, document.getElementById('app'));
-```
-
-## Advanced Features
-
-### Design Tools API
-Create custom design tools with user interaction in the 3D scene.
-
-### Terrain API
-```javascript
-// Access terrain data
-const terrainData = await Forma.terrain.get();
-```
-
-### Sun API
-```javascript
-// Get sun position at specific time
-const sunPosition = await Forma.sun.getPosition({ 
-  date: new Date() 
-});
-
-// Set sun state for visualization
-await Forma.sun.setState({ 
-  azimuth: 180, 
-  altitude: 45 
-});
-```
-
-### Generators API
-Access and manipulate Forma Site Design's generative design capabilities.
-
-### Predictive Analysis API
-Run and retrieve predictive analysis results.
-
-## Key SDK Modules Summary
-
-- **analysis** - Access analysis results (sun, noise, etc.)
-- **areaMetrics** - Calculate area and volume metrics
-- **auth** - OAuth authentication for HTTP APIs
-- **camera** - Control 3D camera view
-- **colorbar** - Display analysis color legends
-- **design-tool** - Create custom design tools
-- **elements** - Access Forma Site Design's element system
-- **experimental** - Experimental features (subject to change)
-- **extensions** - Invoke endpoints, open panels
-- **generators** - Generative design capabilities
-- **geodata** - Geographic data utilities
-- **geometry** - Get geometry data from elements
-- **integrate-elements** - Write data to element system
-- **library** - Add items to asset library
-- **predictive-analysis** - Predictive analysis features
-- **project** - Project-level information
-- **proposal** - Proposal management
-- **render** - Temporary visual changes (color, hide/show, add meshes)
-- **scene/selection** - Selection management
-- **sun** - Sun position and visualization
-- **terrain** - Terrain data access
-
-## Resources
-
-- **Developer Guide:** https://aps.autodesk.com/en/docs/forma/v1/embedded-views/introduction/
-- **SDK Documentation:** https://app.autodeskforma.com/forma-embedded-view-sdk/docs/
-- **Tutorial:** https://aps.autodesk.com/en/docs/forma/v1/embedded-views/tutorial/
-- **NPM Package:** https://www.npmjs.com/package/forma-embedded-view-sdk
-- **Example Repository:** https://github.com/spacemakerai/color-buildings-tutorial
-
-**Note:** The documentation websites are JavaScript-rendered applications and cannot be accessed via standard HTTP fetch. To programmatically access or update this information, you must use **Playwright MCP** to navigate and interact with the pages dynamically.
-
-## Important Notes
-
-1. **All render changes are temporary** - They don't persist to the proposal and are cleaned up when the extension closes
-2. **HTTPS required** for production - Use localhost for development
-3. **Storage is partitioned** - Extensions have isolated cookies/localStorage
-4. **Authentication via popup** - Don't embed login forms directly
-5. **Element paths are immutable** - Use paths to reference geometry consistently
-6. **Coordinate system** - All coordinates are relative to project's `refPoint`
-7. **Analysis grid coordinates** - Calculate using resolution, width, x0, y0
-8. **Color format** - Use RGBA Uint8Array (4 bytes per triangle, not per vertex)
+- Trust the live SDK docs over memory or outdated code.
+- The docs are JS-rendered; use Playwright to inspect them.
+- When a task depends on scene coordinates, transforms, GLB orientation, or unit conversions, also use the `forma-site-design-coordinate-system` skill.
+
+## Element system mental model
+The APS element-system docs describe the durable data model behind Forma content.
+
+- A `FormaElement` is a revisioned JSON object with a `urn` plus optional `metadata`, `properties`, `representations`, and `children`.
+- The URN identifies a specific revision, not just a logical object. The scheme is `urn:adsk-forma-elements:{system}:{authcontext}:{id}:{revision}`.
+- Revisions are immutable. If an element changes, producers create a new revision and update references to that new revision. Changes do not propagate just because an old revision was "edited".
+- `metadata` describes creation context and licensing, not the element's physical meaning.
+- `properties` describe representation-independent semantics such as category, virtual-ness, and analysis figures.
+- `representations` are different semantic views of the same element. Consumers must not assume every element has every representation, and must understand what each representation means, not just its raw data format.
+- `children` create an element tree. The same element revision can appear multiple times under different parents and transforms.
+- Child instance identity comes from child keys and paths, not from the child element URN alone.
+- Child transforms are flattened 4x4 column-major affine matrices in meters. Geometry is transformed by the child's matrix and then by the parent chain.
+
+Important representations called out in the docs:
+- `volumeMesh`: visual 3D mesh in GLB form. Visible 3D objects are expected to support this. GLB is Y-up, while Forma is Z-up.
+- `semanticMesh`: non-overlapping GLB subset for analysis and filtering, with semantic tags like `geometryType` and `unitId`.
+- `grossFloorAreaPolygons`: gross floor area partitioning per level.
+- `terrainShape`: GeoJSON terrain-aligned vector data in the project's coordinate system.
+- `footprint`: 2D occupied ground projection, including overhangs.
+- `volume25DCollection`: 2.5D GeoJSON-style geometry that still needs element-tree transforms applied.
+- `graphBuilding`: topological partitioning of building space across levels, units, and spaces.
+
+Key principles from the docs:
+- Treat the published element specification as the source of truth; do not rely on undocumented API payload details.
+- Write generic consumers that gracefully handle missing representations.
+- Respect immutability and revisioning; updating content means producing a new revision and updating references.
+
+Durable vs temporary scene content:
+- The durable path in Forma is the element system plus the proposal tree. If an extension creates or updates element data and then references it from the proposal tree, that content is preserved in the project and remains available in the scene for the user to view, select, analyze, and manipulate according to the representations provided.
+- Representation choice controls what the user and platform can do with the content. For example, `volumeMesh` makes something visually present in 3D, while `footprint`, `terrainShape`, `semanticMesh`, or `graphBuilding` enable other behaviors and analyses.
+- Do not use the element system for ephemeral overlays, previews, highlights, or transient helpers.
+- If the extension only needs to draw something temporarily in the scene, it must use render-oriented APIs such as `Forma.render.*`, `Forma.render.geojson.*`, `Forma.render.glb.*`, `Forma.render.elementColors.*`, `Forma.colorbar`, or `Forma.terrain.groundTexture.*`.
+
+## Live SDK module list
+These modules are currently present in the live docs:
+- `index`
+- `auto`
+- `analysis`
+- `areaMetrics`
+- `camera`
+- `colorbar`
+- `design-tool`
+- `elements`
+- `elements/types`
+- `experimental`
+- `extensions`
+- `generators`
+- `geodata`
+- `geometry`
+- `integrate-elements`
+- `library`
+- `predictive-analysis`
+- `project`
+- `proposal`
+- `render`
+- `scene/selection`
+- `sun`
+- `terrain`
+
+## Docs-to-runtime name mapping
+- `auto` -> import path that exposes the singleton `Forma`
+- `design-tool` -> `Forma.designTool`
+- `scene/selection` -> `Forma.selection`
+- `geodata` -> `Forma.geoData`
+- `integrate-elements` -> `Forma.integrateElements`
+- `predictive-analysis` -> `Forma.predictiveAnalysis`
+- `elements/types` -> type docs, not a separate runtime namespace
+
+## Host-level SDK surface
+The `EmbeddedViewSdk` class and `Forma` singleton also expose host helpers outside the module namespaces.
+
+- Access and permissions:
+  - `Forma.getProjectId()`
+  - `Forma.getRegion()`
+  - `Forma.getCanEdit()`
+  - `Forma.getCanEditHub()`
+  - `Forma.getCanViewHub()`
+  - `Forma.getExtensionId()`
+  - `Forma.getEmbeddedViewId()`
+  - `Forma.getPresentationUnitSystem()`
+- Embedded-view lifecycle and communication:
+  - `Forma.openFloatingPanel(...)`
+  - `Forma.closeEmbeddedView(...)`
+  - `Forma.createMessagePort(...)`
+  - `Forma.onMessagePort(...)`
+  - `Forma.onEmbeddedViewStateChange(...)`
+  - `Forma.onEmbeddedViewClosing(...)`
+  - `Forma.onLocaleUpdate(...)`
+  - `Forma.ping()`
+- Error surface:
+  - `RequestError`
+
+Rules:
+- `openFloatingPanel`, `closeEmbeddedView`, `createMessagePort`, `onMessagePort`, `onEmbeddedViewStateChange`, and `onEmbeddedViewClosing` are experimental.
+- All SDK math and geometry APIs still operate in metric units even if `getPresentationUnitSystem()` says the UI should default to imperial.
+
+## SDK surface map
+
+### `index` and `auto`
+- Use `forma-embedded-view-sdk/auto` for the preconfigured singleton `Forma`.
+- `index` also documents `EmbeddedViewSdk`, `RequestError`, and `AuthApi`.
+- Prefer `auto` unless the user explicitly needs manual SDK wiring.
+
+### `analysis`
+- Methods: `list`, `getGroundGrid`, `getNoiseAnalysis`, `getSunAnalysis`, `triggerNoise`, `triggerSun`.
+- Use for reading existing analyses or triggering supported analysis runs.
+- Pair `list()` with `Forma.getProjectId()` or proposal/root URN context when needed.
+
+### `areaMetrics`
+- Method: `calculate({ paths? })`.
+- Use for area and metric breakdowns on selected paths or the whole current context.
+
+### `auth`
+- Methods: `configure`, `acquireTokenSilent`, `acquireTokenPopup`, `acquireTokenOverlay`, `refreshCurrentToken`.
+- Prefer SDK auth helpers over custom login forms inside the iframe.
+- Never hardcode secrets or embed username/password fields in the extension UI.
+
+### `camera`
+- Methods: `capture`, `getCurrent`, `move`, `subscribe`, `switchPerspective`.
+- Use for screenshots, camera sync, guided navigation, and viewpoint updates.
+
+### `colorbar`
+- Methods: `add`, `remove`.
+- `add()` accepts `colors`, optional `labels`, `unit`, `labelPosition`, and `onRangeFilterChange`.
+- Only one colorbar is visible at a time.
+
+### `design-tool`
+- Methods: `getPoint`, `getLine`, `getPolygon`, `getExtrudedPolygon`, `onEditStart`, `onEditEnd`.
+- Use when the extension needs the user to click or sketch directly in the scene.
+
+### `elements`
+- Main methods: `get`, `getByPath`, `getWorldTransform`, `editProperties`.
+- Nested APIs:
+  - `Forma.elements.blobs.get`
+  - `Forma.elements.representations.footprint`
+  - `Forma.elements.representations.graphBuilding`
+  - `Forma.elements.representations.grossFloorAreaPolygons`
+  - `Forma.elements.representations.volumeMesh`
+  - `Forma.elements.floorStack.createFromFloors`
+  - `Forma.elements.floorStack.createFromFloorsBatch`
+- Use for reading stored element data, binary representations, world transforms, floor stacks, and property patches.
+- Read the element-system mental model above before constructing or interpreting durable element data.
+
+### `elements/types`
+- Treat this module as the canonical data-shape reference for `FormaElement`, representations, transforms, metadata, traffic data, and related contracts.
+- Read these types before constructing low-level element payloads or interpreting element responses.
+
+### `experimental`
+- `Forma.experimental.analysis.putCatalogItem`
+- `Forma.experimental.housing.listTemplates`
+- `Forma.experimental.housing.createFromLine`
+- The live docs also expose `Forma.experimental.render`.
+- Experimental APIs are subject to change without notice. Do not treat them as stable production defaults.
+
+### `extensions`
+- `Forma.extensions.invokeEndpoint({ extensionId, endpointId, authcontext?, payload })`
+- `Forma.extensions.storage.setObject`
+- `Forma.extensions.storage.getTextObject`
+- `Forma.extensions.storage.getBinaryObject`
+- `Forma.extensions.storage.listObjects`
+- `Forma.extensions.storage.deleteObject`
+- Use `extensions.storage` for extension-owned persisted blobs or text; use `getCanEditHub()` and `getCanViewHub()` when working in hub scope.
+
+### `generators`
+- Methods: `list`, `put`.
+- Supporting docs also cover `Generator`, `GeneratorSchemaV1`, `ExtensionEndpointRunner`, and `ExtensionScriptRunner`.
+- Use when the task is about registering or updating generator definitions.
+
+### `geodata`
+- Method: `upload`.
+- Supported `dataType` values currently include `buildings`, `roads`, and `property-boundaries`.
+- Use for GeoJSON-based uploads that should land in Forma's library and geodata flows.
+
+### `geometry`
+- Methods: `getFootprint`, `getPathsByCategory`, `getPathsForVirtualElements`, `getPathsInsidePolygons`, `getTriangles`.
+- `getFootprint()` does not traverse children.
+- For composite elements, `getTriangles()` is often the better fallback when no direct footprint exists.
+
+### `integrate-elements`
+- Methods: `uploadFile`, `createUrn`, `createElementV2`, `updateElementV2`, `batchIngestElementsV2`, `createElementHierarchy`.
+- Use this module to create or update persistent element URNs and representations before attaching them to proposals.
+- This is the main bridge between uploaded geometry data and proposal mutation APIs.
+- Writing here is part of the durable element-system path, not the temporary render path.
+
+### `library`
+- Methods: `createItem`, `updateItem`, `deleteItem`.
+- Use for extension-managed library entries rather than proposal scene edits.
+- Mutation requires edit access.
+
+### `predictive-analysis`
+- Methods: `getWindParameters`, `predictWind`.
+- Use for wind prediction flows and related derived grids.
+
+### `project`
+- Methods: `get`, `getGeoLocation`.
+- Pair with host helpers like `getProjectId()` and `getRegion()`.
+- Use for project metadata, location-aware features, and contextual auth scopes.
+
+### `proposal`
+- Methods: `get`, `getAll`, `getId`, `getRootUrn`, `subscribe`, `awaitProposalPersisted`, `addElement`, `removeElement`, `replaceElement`, `replaceTerrain`, `updateElements`, `create`, `update`, `duplicate`, `switch`, `delete`.
+- Use for current proposal context, proposal lifecycle, and persistent scene-tree edits.
+- Mutation requires edit access; `updateElements()` is the preferred batch operation for mixed add, replace, and remove work.
+- Referencing elements from the proposal tree is what makes durable element-system content appear and persist in the scene.
+
+### `render`
+- Core methods: `addMesh`, `updateMesh`, `remove`, `cleanup`, `hideElement`, `hideElementsBatch`, `unhideElement`, `unhideElementsBatch`, `unhideAllElements`, `setElementsVisibility`.
+- Nested APIs:
+  - `Forma.render.elementColors.set`
+  - `Forma.render.elementColors.clear`
+  - `Forma.render.elementColors.clearAll`
+  - `Forma.render.geojson.add`
+  - `Forma.render.geojson.update`
+  - `Forma.render.geojson.remove`
+  - `Forma.render.geojson.cleanup`
+  - `Forma.render.glb.add`
+  - `Forma.render.glb.update`
+  - `Forma.render.glb.remove`
+  - `Forma.render.glb.cleanup`
+- Use for temporary overlays, visibility changes, GLB previews, GeoJSON overlays, and per-element color overrides.
+- Render APIs are for transient scene output only; they do not create durable element-system content.
+
+### `scene/selection`
+- Methods: `getSelection`, `subscribe`.
+- `subscribe()` callbacks receive `{ paths }`.
+- Use for user-driven element context and reactive UI tied to current selection.
+
+### `sun`
+- Methods: `getDate`, `setDate`.
+- Use for sun-state-driven UI or analysis setup.
+
+### `terrain`
+- Core methods: `getBbox`, `getElevationAt`, `getPads`, `addPads`, `applyPads`.
+- Nested API:
+  - `Forma.terrain.groundTexture.add`
+  - `Forma.terrain.groundTexture.remove`
+  - `Forma.terrain.groundTexture.updatePosition`
+  - `Forma.terrain.groundTexture.updateTextureData`
+- Use for terrain inspection, elevation-aware placement, terrain pads, and projected ground textures.
+
+## Choose the right family
+- Temporary visualization: prefer `render`, `colorbar`, and sometimes `terrain.groundTexture`; this is transient scene output.
+- Persistent scene content: use `integrate-elements`, `elements.floorStack`, and `proposal`; this is the durable path for content that should stay in the scene for the user.
+- Read-only geometry and metadata: use `project`, `geometry`, `elements`, `terrain`, `selection`, `camera`.
+- Scene picking or sketching: use `design-tool` and `selection`.
+- Authenticated backend or storage workflows: use `auth`, `extensions`, `extensions.storage`, `library`, `generators`.
+- Advanced analysis workflows: use `analysis`, `areaMetrics`, `predictiveAnalysis`, `sun`, and `experimental.analysis` if the task explicitly depends on it.
+- Unstable or preview capabilities: treat `experimental` and the experimental host helpers as opt-in, task-specific surfaces.
+
+## Practical rules
+- Decide first whether the task is temporary or persistent.
+- Check `await Forma.getCanEdit()` before proposal, element, terrain, library, or storage mutation.
+- Check `getCanEditHub()` or `getCanViewHub()` when a workflow targets hub-scoped storage.
+- Keep embedded-view UIs narrow and responsive.
+- Use `Forma.proposal.subscribe()` or `Forma.selection.subscribe()` when cached UI state depends on changing host state.
+- Use `RequestError` for SDK-specific request failures.
+- Use flattened 4x4 column-major transforms for Forma scene transforms.
+- For detailed coordinate-handling guidance, also use the `forma-site-design-coordinate-system` skill.
+- `render.glb.add()` takes a binary `ArrayBuffer`, not a URL.
+- `render.GeometryData.color` is RGBA per vertex.
+- `geometry.getFootprint()` does not traverse children.
+
+## Stale patterns to avoid
+Do not generate these older patterns unless the current code clearly and intentionally wraps them:
+- `Forma.proposal.getRevision()`
+- `Forma.selection.add(...)`
+- `Forma.camera.getState()`, `setState()`, or `zoomTo()`
+- `Forma.render.elementColors.reset(...)`
+- `Forma.render.glb.add({ url: ... })`
+- `Forma.library.addItem(...)`
+- `Forma.extensions.invokeEndpoint({ method, data })`
+
+## Live docs
+- `https://app.autodeskforma.com/forma-embedded-view-sdk/docs/`
+- `https://app.autodeskforma.com/forma-embedded-view-sdk/docs/modules.html`
+- `https://app.autodeskforma.com/forma-embedded-view-sdk/docs/classes/index.EmbeddedViewSdk.html`
+- `https://aps.autodesk.com/en/docs/forma/v1/working-with-forma/element-system/forma-element-specification/`
+- `https://aps.autodesk.com/en/docs/forma/v1/working-with-forma/element-system/key-principles/`
+
+When an API is uncertain, verify the relevant live docs page with Playwright before generating code.
