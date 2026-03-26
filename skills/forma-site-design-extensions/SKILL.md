@@ -1,6 +1,6 @@
 ---
 name: forma-site-design-extensions
-description: Builds Autodesk Forma Site Design embedded-view extensions with the full forma-embedded-view-sdk surface, including host-level helpers plus analysis, areaMetrics, auth, camera, colorbar, design-tool, elements, experimental, extensions, generators, geodata, geometry, integrate-elements, library, predictive-analysis, project, proposal, render, selection, sun, and terrain APIs. Use when the user mentions Forma, embedded views, extension SDK, proposals, geometry, analyses, or any Forma SDK module.
+description: Builds Autodesk Forma Site Design embedded-view extensions with the full forma-embedded-view-sdk surface, including host-level helpers plus analysis, areaMetrics, auth, camera, colorbar, design-tool, elements, experimental, extensions, generators, geodata, geometry, integrate-elements, library, predictive-analysis, project, proposal, render, selection, settings, sun, and terrain APIs. Use when the user mentions Forma, embedded views, extension SDK, proposals, geometry, analyses, or any Forma SDK module.
 ---
 # Forma Site Design Extensions
 
@@ -77,6 +77,7 @@ These modules are currently present in the live docs:
 - `proposal`
 - `render`
 - `scene/selection`
+- `settings`
 - `sun`
 - `terrain`
 
@@ -84,6 +85,7 @@ These modules are currently present in the live docs:
 - `auto` -> import path that exposes the singleton `Forma`
 - `design-tool` -> `Forma.designTool`
 - `scene/selection` -> `Forma.selection`
+- `settings` -> `Forma.settings`
 - `geodata` -> `Forma.geoData`
 - `integrate-elements` -> `Forma.integrateElements`
 - `predictive-analysis` -> `Forma.predictiveAnalysis`
@@ -247,6 +249,20 @@ Rules:
 - `subscribe()` callbacks receive `{ paths }`.
 - Use for user-driven element context and reactive UI tied to current selection.
 
+### `settings`
+- Main method: `get`.
+- Nested API:
+  - `Forma.settings.buildingFunctions.add`
+  - `Forma.settings.buildingFunctions.update`
+  - `Forma.settings.buildingFunctions.delete`
+- Use for reading and managing project-level building functions via `Forma.settings`.
+- `get()` returns all project building functions, including the three built-in defaults: `residential`, `commercial`, and `unspecified`.
+- `buildingFunctions.add({ name, color? })` creates a project-level building function and returns the updated `SettingsResponse`.
+- `buildingFunctions.update({ id, name, color? })` updates a custom building function and returns the updated `SettingsResponse`.
+- `buildingFunctions.delete({ id })` deletes a custom building function and returns the updated `SettingsResponse`.
+- `color` values are hex strings such as `#FF5733`.
+- `update()` and `delete()` return an error when the `id` belongs to a built-in building function.
+
 ### `sun`
 - Methods: `getDate`, `setDate`.
 - Use for sun-state-driven UI or analysis setup.
@@ -264,6 +280,7 @@ Rules:
 - Temporary visualization: prefer `render`, `colorbar`, and sometimes `terrain.groundTexture`; this is transient scene output.
 - Persistent scene content: use `integrate-elements`, `elements.floorStack`, and `proposal`; this is the durable path for content that should stay in the scene for the user.
 - Read-only geometry and metadata: use `project`, `geometry`, `elements`, `terrain`, `selection`, `camera`.
+- Project-level configuration: use `settings` and `settings.buildingFunctions` for building function definitions and colors.
 - Scene picking or sketching: use `design-tool` and `selection`.
 - Authenticated backend or storage workflows: use `auth`, `extensions`, `extensions.storage`, `library`, `generators`.
 - Advanced analysis workflows: use `analysis`, `areaMetrics`, `predictiveAnalysis`, `sun`, and `experimental.analysis` if the task explicitly depends on it.
@@ -278,6 +295,7 @@ Rules:
 - Use `RequestError` for SDK-specific request failures.
 - Use flattened 4x4 column-major transforms for Forma scene transforms.
 - For detailed coordinate-handling guidance, also use the `forma-site-design-coordinate-system` skill.
+- Treat the built-in building functions `residential`, `commercial`, and `unspecified` as immutable defaults; do not call `update()` or `delete()` on their IDs.
 - `render.glb.add()` takes a binary `ArrayBuffer`, not a URL.
 - `render.GeometryData.color` is RGBA per vertex.
 - `geometry.getFootprint()` does not traverse children.
